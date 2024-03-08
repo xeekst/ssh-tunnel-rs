@@ -1,0 +1,6 @@
+[workspace.package]
+version = "0.1.96"
+
+[workspace]
+members = ["ssh-tunnel-cli", "ssh-tunnel-gui"]
+exclude = ["ssh-tunnel-core"]

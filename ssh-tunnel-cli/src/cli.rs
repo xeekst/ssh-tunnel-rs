@@ -26,6 +26,7 @@ pub struct Cli {
 
 #[derive(Debug, Subcommand)]
 pub enum TunnelCommand {
+    /// Use local port forward ssh server port so that it can access the ports that the SSH server can access
     Local {
         /// local listen port for accepting tcp request
         #[arg(short, long, required(true))]
@@ -39,6 +40,7 @@ pub enum TunnelCommand {
         #[arg(long, required(true))]
         remote_port: u16,
     },
+    /// Use remote port forward ssh server port so that ssh server can access local port
     Remote {
         /// local host ip for your tcp server, will be connect this address from ssh server to local-host:local-port
         #[arg(long, required(true))]

@@ -3,7 +3,15 @@ this is a ssh tunnel forward tool by rust, contains cross platform GUI and CLI
 
 ### Dependency Framework
 - GUI: FLTK:https://github.com/fltk-rs/fltk-rs
-- CLI: 
+
+- CLI: Rust 
+
+
+### GUI 
+![ssh-tunnel-gui.jpg](ssh-tunnel-gui.jpg)
+
+### CLI
+![ssh-tunnel-cli.png](ssh-tunnel-cli.png)
 
 ### How to use?
 

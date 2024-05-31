@@ -20,6 +20,11 @@ this is a ssh tunnel forward tool by rust, contains cross platform GUI and CLI
 ssh-tunnel-cli --host 192.168.5.45 --user someuser --pwd somepwd local --local-port 3316 --remote-host 192.168.5.36 --remote-port 3306
 ```
 
+#### 2. Remote port forward
+```sh
+ssh-tunnel-cli --host 192.168.5.45 --user someuser --pwd somepwd remote --local-port 3316 --local-host 192.168.5.36 --remote-port 3306
+```
+
 ### Roadmap
 - [x] GUI for windows/winpe, linux, macos
 - [x] cli for windows/winpe, linux, macos about local/remote tunnel

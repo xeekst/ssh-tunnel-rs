@@ -16,14 +16,24 @@ this is a ssh tunnel forward tool by rust, contains cross platform GUI and CLI
 
 ### How to use?
 
-#### 1. Local port forward
+#### 1. Local port forward by password
 ```sh
-ssh-tunnel-cli --host 192.168.5.45 --user someuser --pwd somepwd local --local-port 3316 --remote-host 192.168.5.36 --remote-port 3306
+ssh-tunnel-cli --host 192.168.5.45 --user someuser -a password --pwd somepwd local --local-port 3316 --remote-host 192.168.5.36 --remote-port 3306
 ```
 
-#### 2. Remote port forward
+#### 2. Remote port forward by password
 ```sh
-ssh-tunnel-cli --host 192.168.5.45 --user someuser --pwd somepwd remote --local-port 3316 --local-host 192.168.5.36 --remote-port 3306
+ssh-tunnel-cli --host 192.168.5.45 --user someuser -a password --pwd somepwd remote --local-port 3316 --local-host 192.168.5.36 --remote-port 3306
+```
+
+#### 3. Local port forward by KeyPair
+```sh
+ssh-tunnel-cli --host 192.168.5.45 --user someuser -a key-pair --private_key /usr/yourname/private_k_file --local-port 3316 --remote-host 192.168.5.36 --remote-port 3306
+```
+
+#### 4. Remote port forward by KeyPair
+```sh
+ssh-tunnel-cli --host 192.168.5.45 --user someuser -a key-pair --private_key /usr/yourname/private_k_file remote --local-port 3316 --local-host 192.168.5.36 --remote-port 3306
 ```
 
 ### Roadmap

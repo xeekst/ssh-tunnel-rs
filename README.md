@@ -4,15 +4,15 @@ this is a ssh tunnel forward tool by rust, contains cross platform GUI and CLI
 ### Dependency Framework
 > if compile openssl error, try install cmake: https://cmake.org/download/ and https://strawberryperl.com/
 
-- GUI: FLTK:https://github.com/fltk-rs/fltk-rs
-
 - CLI: Rust 
 
-### GUI 
-![ssh-tunnel-gui.jpg](ssh-tunnel-gui.jpg)
+- GUI: FLTK:https://github.com/fltk-rs/fltk-rs
 
 ### CLI
 ![ssh-tunnel-cli.png](ssh-tunnel-cli.png)
+
+### GUI 
+![ssh-tunnel-gui.jpg](ssh-tunnel-gui.jpg)
 
 ### How to use?
 

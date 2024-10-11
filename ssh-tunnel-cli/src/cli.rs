@@ -16,9 +16,21 @@ pub struct Cli {
     #[arg(short, long, required(true))]
     pub user: String,
 
-    /// password of ssh server
-    #[arg(long, required(true))]
+    /// auth method (password or key-pair)
+    #[arg(short, long, required(true))]
+    pub auth: AuthMethod,
+
+    /// password of ssh server, when auth is password, this is required
+    #[arg(long)]
     pub pwd: String,
+
+    /// your ssh private key file path (usually path: /$HOME/.ssh/<private_key_file>),  when auth is key-pair, will require private_key
+    #[arg(long)]
+    pub private_key: String,
+
+    /// password of ssh private key file
+    #[arg(long, default_value = None)]
+    pub passphrase: Option<String>,
 
     #[command(subcommand)]
     pub tunnel: TunnelCommand,
@@ -54,4 +66,10 @@ pub enum TunnelCommand {
         #[arg(long, required(true))]
         remote_port: u16,
     },
+}
+
+#[derive(ValueEnum, Clone, Debug)]
+pub enum AuthMethod {
+    Password,
+    KeyPair,
 }

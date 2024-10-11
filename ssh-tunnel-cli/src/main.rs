@@ -16,17 +16,29 @@ mod cli;
 
 #[tokio::main]
 async fn main() {
-    let cli = cli::Cli::parse();
+    let clip = cli::Cli::parse();
     init_log().expect("init log error:");
 
-    let host_addr = HostAddress::HostName(Cow::Borrowed(&cli.host));
-    let ssh_auth = SshAuthMethod::Password {
-        password: Cow::Borrowed(&cli.pwd),
+    let host_addr = HostAddress::HostName(Cow::Borrowed(&clip.host));
+    let ssh_auth = match &clip.auth {
+        cli::AuthMethod::Password => SshAuthMethod::Password {
+            password: Cow::Borrowed(&clip.pwd),
+        },
+        cli::AuthMethod::KeyPair => {
+            if clip.private_key.is_empty() {
+                panic!("when auth is {:?}, --private-key can not be empty.", cli::AuthMethod::KeyPair);
+            }
+            SshAuthMethod::KeyPair {
+                private_key: std::borrow::Cow::Borrowed(&clip.private_key),
+                passphrase: clip.passphrase.map(|s| std::borrow::Cow::from(s)),
+            }
+        }
     };
+
     let local_listen_ip = std::net::IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0));
     let (tx, rx) = tokio::sync::mpsc::channel::<bool>(1);
 
-    match &cli.tunnel {
+    match &clip.tunnel {
         TunnelCommand::Local {
             local_port,
             remote_host,
@@ -42,8 +54,8 @@ async fn main() {
             ssh_forward::open_local_tunnel(
                 rx,
                 &host_addr,
-                cli.port,
-                &cli.user,
+                clip.port,
+                &clip.user,
                 &ssh_auth,
                 local_listen_ip,
                 *local_port,
@@ -61,29 +73,18 @@ async fn main() {
             remote_port,
         } => {
             let ipaddr: IpAddr = local_host.parse().unwrap();
-            ssh_forward::open_remote_tunnel(
-                rx,
-                &host_addr,
-                cli.port,
-                &cli.user,
-                &ssh_auth,
-                ipaddr,
-                *local_port,
-                *remote_port,
-            )
-            .await
-            .unwrap()
-            .await
-            .unwrap();
+            ssh_forward::open_remote_tunnel(rx, &host_addr, clip.port, &clip.user, &ssh_auth, ipaddr, *local_port, *remote_port)
+                .await
+                .unwrap()
+                .await
+                .unwrap();
         }
         _ => {}
     }
 }
 
 fn init_log() -> Result<()> {
-    let colors = ColoredLevelConfig::new()
-        .debug(Color::Magenta)
-        .info(Color::Green);
+    let colors = ColoredLevelConfig::new().debug(Color::Magenta).info(Color::Green);
     fern::Dispatch::new()
         // write console
         .chain(
@@ -96,12 +97,7 @@ fn init_log() -> Result<()> {
                         //record.target(),
                         record.file().unwrap_or("<unnamed>"),
                         record.line().unwrap_or(0),
-                        message
-                            .to_string()
-                            .split("\n\nStack backtrace:")
-                            .collect::<Vec<&str>>()
-                            .get(0)
-                            .unwrap_or(&"")
+                        message.to_string().split("\n\nStack backtrace:").collect::<Vec<&str>>().get(0).unwrap_or(&"")
                     ))
                 })
                 .level(log::LevelFilter::Info)

@@ -136,8 +136,6 @@ pub async fn open_local_tunnel(
     info!("ssh server target_address is: {target_address}:{target_port}");
     let mut exit_signal_rx = exit_signal_rx;
 
-    //TODO: invoke callback to notify UI is running
-
     let spawn_join_handle: tokio::task::JoinHandle<()> = tokio::task::spawn(async move {
         let mut ssh_session = retry_get_ssh_session(&host_addr_clone, host_port, &username_clone, &auth_method_clone).await;
         loop {
@@ -338,14 +336,17 @@ async fn new_ssh_session(host_addr: &HostAddress<'_>, host_port: u16, username: 
         HostAddress::HostName(host_name) => resolve_ip(host_name).await?,
     };
 
-    info!("ssh server host_ip is: {host_ip}");
+    info!("ssh server host:port is: {host_ip}:{host_port}");
 
     let mut session_config = SessionConfiguration::new();
     session_config.set_compress(true);
     session_config.set_keepalive(false, 30);
+    info!("start ssh server tcp connect");
     let mut session = AsyncSession::<TokioTcpStream>::connect(SocketAddr::from((host_ip, host_port)), Some(session_config)).await?;
 
+    info!("start ssh server handshake");
     session.handshake().await?;
+    info!("start ssh server userauth :{:?}", auth_method);
     match auth_method {
         SshAuthMethod::KeyPair { private_key, passphrase } => {
             session
@@ -355,10 +356,11 @@ async fn new_ssh_session(host_addr: &HostAddress<'_>, host_port: u16, username: 
         SshAuthMethod::Password { password } => session.userauth_password(username, password.as_ref()).await?,
     }
 
+    info!("start ssh authenticate");
     if !session.authenticated() {
         return Err(anyhow!("try login to {host_addr}:{host_port} auth failed. error:{:?}", session.last_error()));
     }
-
+    //panic!("ok: {:?}", session.authenticated());
     Ok(SshSession(session))
 }
 
@@ -480,6 +482,7 @@ async fn open_remote_port_forward_channel(
                 }
                 r = remote_listener.accept() => match r {
                     Ok(mut ssh_channel) => {
+
                         let mut response_stream = match TokioTcpStream::connect(local_socket).await {
                             Ok(s) => s,
                             Err(e) => {
@@ -541,6 +544,8 @@ async fn open_remote_port_forward_channel(
 
     Ok(spawn_join_handle)
 }
+
+async fn open_dynamic_port_forward_channel() {}
 
 async fn resolve_ip(host_name: &str) -> Result<IpAddr> {
     let resolver = resolver_from_system_conf().await?;

@@ -28,12 +28,12 @@ ssh-tunnel-cli --host 192.168.5.45 --user someuser -a password --pwd somepwd rem
 
 #### 3. Local port forward by KeyPair
 ```sh
-ssh-tunnel-cli --host 192.168.5.45 --user someuser -a key-pair --private_key /usr/yourname/private_k_file --local-port 3316 --remote-host 192.168.5.36 --remote-port 3306
+ssh-tunnel-cli --host 192.168.5.45 --user someuser -a key-pair --private-key /usr/yourname/private_k_file --local-port 3316 --remote-host 192.168.5.36 --remote-port 3306
 ```
 
 #### 4. Remote port forward by KeyPair
 ```sh
-ssh-tunnel-cli --host 192.168.5.45 --user someuser -a key-pair --private_key /usr/yourname/private_k_file remote --local-port 3316 --local-host 192.168.5.36 --remote-port 3306
+ssh-tunnel-cli --host 192.168.5.45 --user someuser -a key-pair --private-key /usr/yourname/private_k_file remote --local-port 3316 --local-host 192.168.5.36 --remote-port 3306
 ```
 
 ### Roadmap

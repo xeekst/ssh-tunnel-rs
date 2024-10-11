@@ -7,7 +7,11 @@ edition = "2021"
 
 [dependencies]
 tokio = { version = "1", features = ["full"] }
-async-ssh2-lite =  { version = "0.4.7", features = ["tokio"] }
+async-ssh2-lite = { version = "0.4.7", features = [
+    "tokio",
+    "openssl-on-win32",
+    "vendored-openssl",
+] }
 async-std-resolver = "0.22.0"
 log = "0.4.19"
 anyhow = "1"

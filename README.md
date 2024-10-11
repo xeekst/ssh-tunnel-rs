@@ -2,10 +2,11 @@
 this is a ssh tunnel forward tool by rust, contains cross platform GUI and CLI
 
 ### Dependency Framework
+> if compile openssl error, try install cmake: https://cmake.org/download/ and https://strawberryperl.com/
+
 - GUI: FLTK:https://github.com/fltk-rs/fltk-rs
 
 - CLI: Rust 
-
 
 ### GUI 
 ![ssh-tunnel-gui.jpg](ssh-tunnel-gui.jpg)
@@ -30,6 +31,6 @@ ssh-tunnel-cli --host 192.168.5.45 --user someuser --pwd somepwd remote --local-
 - [x] cli for windows/winpe, linux, macos about local/remote tunnel
 - [x] local ssh tunnel by user/password
 - [x] remote ssh tunnel by user/password
-- [ ] support auth by ssh file
+- [x] support auth by ssh file
 - [ ] support dynamic port forward
 - [ ] support clearer status display

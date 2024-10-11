@@ -360,7 +360,8 @@ async fn new_ssh_session(host_addr: &HostAddress<'_>, host_port: u16, username: 
     if !session.authenticated() {
         return Err(anyhow!("try login to {host_addr}:{host_port} auth failed. error:{:?}", session.last_error()));
     }
-    //panic!("ok: {:?}", session.authenticated());
+    info!("ssh authenticate success");
+    
     Ok(SshSession(session))
 }
 

@@ -21,15 +21,15 @@ pub struct Cli {
     pub auth: AuthMethod,
 
     /// password of ssh server, when auth is password, this is required
-    #[arg(long)]
+    #[arg(long, required(false), default_value_t = String::from(""))]
     pub pwd: String,
 
     /// your ssh private key file path (usually path: /$HOME/.ssh/<private_key_file>),  when auth is key-pair, will require private_key
-    #[arg(long)]
+    #[arg(long, required(false), default_value_t = String::from(""))]
     pub private_key: String,
 
     /// password of ssh private key file
-    #[arg(long, default_value = None)]
+    #[arg(long, default_value = None, required(false))]
     pub passphrase: Option<String>,
 
     #[command(subcommand)]

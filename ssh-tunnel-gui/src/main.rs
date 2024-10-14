@@ -6,7 +6,6 @@ mod ssh_tunnel_view;
 use std::borrow::BorrowMut;
 use std::collections::HashMap;
 use std::io::{BufRead, BufReader, Stdin, Write};
-use std::os::windows::process::CommandExt;
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
 use std::sync::RwLock;

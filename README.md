@@ -44,3 +44,7 @@ ssh-tunnel-cli --host 192.168.5.45 --user someuser -a key-pair --private-key /us
 - [x] support auth by ssh file
 - [ ] support dynamic port forward
 - [ ] support clearer status display
+- [ ] interactive mode
+
+### Welcome any suggestions and contributions
+##### If you have any questions, you can submit your issue

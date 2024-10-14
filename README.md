@@ -14,6 +14,20 @@ this is a ssh tunnel forward tool by rust, contains cross platform GUI and CLI
 ### GUI 
 ![ssh-tunnel-gui.jpg](ssh-tunnel-gui.jpg)
 
+### How to run?
+
+#### 1. just run cli
+```sh
+cargo run --bin ssh-tunnel-cli -- -h
+# run with args
+cargo run --bin ssh-tunnel-cli -- --host 192.168.5.45 --user someuser -a password --pwd somepwd local --local-port 3316 --remote-host 192.168.5.36 --remote-port 3306
+```
+
+#### 2. just run gui
+```sh
+cargo run --bin ssh-tunnel-gui
+```
+
 ### How to use?
 
 #### 1. Local port forward by password

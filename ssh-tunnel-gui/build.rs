@@ -39,3 +39,10 @@ fn main() {
         }
     }
 }
+#[cfg(target_os = "linux")]
+fn main() {
+    println!("cargo:rerun-if-changed=src/basic_view.fl");
+    let g = fl2rust::Generator::default();
+    g.in_out("src/basic_view.fl", "src/basic_view.rs")
+        .expect("Failed to generate rust from fl file!");
+}

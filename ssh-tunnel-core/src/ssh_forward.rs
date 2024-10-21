@@ -119,7 +119,7 @@ async fn retry_get_ssh_session(
             r = new_ssh_session(&host_addr, host_port, &username, &auth_method) => match r {
                 Ok(s) => break s,
                 Err(ssh_err) => {
-                    error!("create new ssh session error: {:?}, will be retry after 20 sec", ssh_err);
+                    error!("create new ssh session error: {:?}, will be retry after 3 sec", ssh_err);
                     thread::sleep(Duration::from_secs(3));
                     continue;
                 }

@@ -4,6 +4,7 @@ use std::{
     net::{IpAddr, Ipv4Addr, SocketAddr},
     ops::{Deref, DerefMut},
     path::Path,
+    process,
     sync::{atomic::AtomicBool, Arc},
     thread,
     time::Duration,
@@ -102,16 +103,28 @@ impl SshSession {
     }
 }
 
-async fn retry_get_ssh_session(host_addr: &HostAddress<'_>, host_port: u16, username: &str, auth_method: &SshAuthMethod<'_>) -> SshSession {
+async fn retry_get_ssh_session(
+    exit_signal_rx: &mut Receiver<bool>,
+    host_addr: &HostAddress<'_>,
+    host_port: u16,
+    username: &str,
+    auth_method: &SshAuthMethod<'_>,
+) -> SshSession {
     loop {
-        match new_ssh_session(&host_addr, host_port, &username, &auth_method).await {
-            Ok(s) => break s,
-            Err(ssh_err) => {
-                error!("create new ssh session error: {:?}, will be retry after 20 sec", ssh_err);
-                thread::sleep(Duration::from_secs(20));
-                continue;
+        tokio::select! {
+            _ = exit_signal_rx.recv() => {
+                warn!("recv exit_signal, will break loop then exit process.");
+                process::exit(0);
             }
-        };
+            r = new_ssh_session(&host_addr, host_port, &username, &auth_method) => match r {
+                Ok(s) => break s,
+                Err(ssh_err) => {
+                    error!("create new ssh session error: {:?}, will be retry after 20 sec", ssh_err);
+                    thread::sleep(Duration::from_secs(3));
+                    continue;
+                }
+            }
+        }
     }
 }
 
@@ -137,7 +150,7 @@ pub async fn open_local_tunnel(
     let mut exit_signal_rx = exit_signal_rx;
 
     let spawn_join_handle: tokio::task::JoinHandle<()> = tokio::task::spawn(async move {
-        let mut ssh_session = retry_get_ssh_session(&host_addr_clone, host_port, &username_clone, &auth_method_clone).await;
+        let mut ssh_session = retry_get_ssh_session(&mut exit_signal_rx, &host_addr_clone, host_port, &username_clone, &auth_method_clone).await;
         loop {
             tokio::select! {
                 _ = exit_signal_rx.recv() => {
@@ -156,7 +169,7 @@ pub async fn open_local_tunnel(
                             Ok(channel) => channel,
                             Err(err) => {
                                 error!("create ssh channel_direct_tcpip error:{:?}", err);
-                                ssh_session = retry_get_ssh_session(&host_addr_clone, host_port, &username_clone, &auth_method_clone).await;
+                                ssh_session = retry_get_ssh_session(&mut exit_signal_rx,&host_addr_clone, host_port, &username_clone, &auth_method_clone).await;
                                 tokio::time::sleep(core::time::Duration::from_secs(5)).await;
                                 continue;
                             }
@@ -249,7 +262,7 @@ pub async fn open_remote_tunnel(
 
     //TODO: invoke callback to notify UI is running
     let spawn_join_handle = tokio::task::spawn(async move {
-        let mut ssh_session = retry_get_ssh_session(&host_addr_clone, host_port, &username_clone, &auth_method_clone).await;
+        let mut ssh_session = retry_get_ssh_session(&mut exit_signal_rx, &host_addr_clone, host_port, &username_clone, &auth_method_clone).await;
         let mut remote_listener = ssh_session.retry_channel_forward_listen_channel(remote_port).await;
         loop {
             tokio::select! {
@@ -273,7 +286,7 @@ pub async fn open_remote_tunnel(
                     Err(e) => {
                         error!("remote ssh listener accept error:{:?}", e);
                         thread::sleep(Duration::from_secs(20));
-                        ssh_session = retry_get_ssh_session(&host_addr_clone, host_port, &username_clone, &auth_method_clone).await;
+                        ssh_session = retry_get_ssh_session(&mut exit_signal_rx, &host_addr_clone, host_port, &username_clone, &auth_method_clone).await;
                         remote_listener = ssh_session.retry_channel_forward_listen_channel(remote_port).await;
                     }
                 }
@@ -361,7 +374,7 @@ async fn new_ssh_session(host_addr: &HostAddress<'_>, host_port: u16, username: 
         return Err(anyhow!("try login to {host_addr}:{host_port} auth failed. error:{:?}", session.last_error()));
     }
     info!("ssh authenticate success");
-    
+
     Ok(SshSession(session))
 }
 

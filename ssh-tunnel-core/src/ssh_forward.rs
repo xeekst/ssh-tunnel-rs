@@ -109,15 +109,16 @@ async fn retry_get_ssh_session(
     host_port: u16,
     username: &str,
     auth_method: &SshAuthMethod<'_>,
-) -> SshSession {
+) -> Option<SshSession> {
     loop {
         tokio::select! {
             _ = exit_signal_rx.recv() => {
                 warn!("recv exit_signal, will break loop then exit process.");
-                process::exit(0);
+                break None;
+                //process::exit(0);
             }
             r = new_ssh_session(&host_addr, host_port, &username, &auth_method) => match r {
-                Ok(s) => break s,
+                Ok(s) => break Some(s),
                 Err(ssh_err) => {
                     error!("create new ssh session error: {:?}, will be retry after 3 sec", ssh_err);
                     thread::sleep(Duration::from_secs(3));
@@ -150,40 +151,48 @@ pub async fn open_local_tunnel(
     let mut exit_signal_rx = exit_signal_rx;
 
     let spawn_join_handle: tokio::task::JoinHandle<()> = tokio::task::spawn(async move {
-        let mut ssh_session = retry_get_ssh_session(&mut exit_signal_rx, &host_addr_clone, host_port, &username_clone, &auth_method_clone).await;
-        loop {
-            tokio::select! {
-                _ = exit_signal_rx.recv() => {
-                    warn!("recv exit_signal, will break loop then exit process.");
-                    break;
-                }
-                r = local_listener.accept() => match r {
-                    Ok((request_stream, req_socket)) => {
-
-                        info!("accept a tcp connect from:{:?}", req_socket);
-
-                        let ssh_channel = match (&ssh_session)
-                            .channel_direct_tcpip(&target_address, target_port, None)
-                            .await
-                        {
-                            Ok(channel) => channel,
-                            Err(err) => {
-                                error!("create ssh channel_direct_tcpip error:{:?}", err);
-                                ssh_session = retry_get_ssh_session(&mut exit_signal_rx,&host_addr_clone, host_port, &username_clone, &auth_method_clone).await;
-                                tokio::time::sleep(core::time::Duration::from_secs(5)).await;
-                                continue;
-                            }
-                        };
-
-                        handle_local_tcp_request(ssh_channel, request_stream, req_socket);
+        let ssh_session_ot = retry_get_ssh_session(&mut exit_signal_rx, &host_addr_clone, host_port, &username_clone, &auth_method_clone).await;
+        if let Some(mut ssh_session) = ssh_session_ot {
+            loop {
+                tokio::select! {
+                    _ = exit_signal_rx.recv() => {
+                        warn!("recv exit_signal, will break loop then exit process.");
+                        break;
                     }
-                    Err(e) => {
-                        error!("local tcp listener accept error:{:?}", e);
-                        thread::sleep(Duration::from_secs(20));
+                    r = local_listener.accept() => match r {
+                        Ok((request_stream, req_socket)) => {
+
+                            info!("accept a tcp connect from:{:?}", req_socket);
+
+                            let ssh_channel = match (&ssh_session)
+                                .channel_direct_tcpip(&target_address, target_port, None)
+                                .await
+                            {
+                                Ok(channel) => channel,
+                                Err(err) => {
+                                    error!("create ssh channel_direct_tcpip error:{:?}", err);
+                                    ssh_session = match retry_get_ssh_session(&mut exit_signal_rx,&host_addr_clone, host_port, &username_clone, &auth_method_clone).await {
+                                        Some(s) => s,
+                                        None => {
+                                            error!("retry get ssh session error:{:?}", err);
+                                            break;
+                                        }
+                                    };
+                                    tokio::time::sleep(core::time::Duration::from_secs(5)).await;
+                                    continue;
+                                }
+                            };
+
+                            handle_local_tcp_request(ssh_channel, request_stream, req_socket);
+                        }
+                        Err(e) => {
+                            error!("local tcp listener accept error:{:?}", e);
+                            thread::sleep(Duration::from_secs(20));
+                        }
                     }
                 }
             }
-        }
+        };
     });
 
     // let spawn_join_handle = open_local_port_forward_channel(exit_signal_rx, ssh_session, local_socket, target_host, target_port).await?;
@@ -262,36 +271,44 @@ pub async fn open_remote_tunnel(
 
     //TODO: invoke callback to notify UI is running
     let spawn_join_handle = tokio::task::spawn(async move {
-        let mut ssh_session = retry_get_ssh_session(&mut exit_signal_rx, &host_addr_clone, host_port, &username_clone, &auth_method_clone).await;
-        let mut remote_listener = ssh_session.retry_channel_forward_listen_channel(remote_port).await;
-        loop {
-            tokio::select! {
-                _ = exit_signal_rx.recv() => {
-                    warn!("recv exit_signal, will break loop then exit process.");
-                    break;
-                }
-                r = remote_listener.accept() => match r {
-                    Ok(ssh_channel) => {
-                        let response_stream = match TokioTcpStream::connect(local_socket).await {
-                            Ok(s) => s,
-                            Err(e) => {
-                                error!("try connect local:{:?} error:{:?}", local_socket, e);
-                                tokio::time::sleep(core::time::Duration::from_secs(5)).await;
-                                continue;
-                            }
-                        };
-
-                        handle_remote_channel_request(ssh_channel, response_stream);
+        let ssh_session_ot = retry_get_ssh_session(&mut exit_signal_rx, &host_addr_clone, host_port, &username_clone, &auth_method_clone).await;
+        if let Some(mut ssh_session) = ssh_session_ot {
+            let mut remote_listener = ssh_session.retry_channel_forward_listen_channel(remote_port).await;
+            loop {
+                tokio::select! {
+                    _ = exit_signal_rx.recv() => {
+                        warn!("recv exit_signal, will break loop then exit process.");
+                        break;
                     }
-                    Err(e) => {
-                        error!("remote ssh listener accept error:{:?}", e);
-                        thread::sleep(Duration::from_secs(20));
-                        ssh_session = retry_get_ssh_session(&mut exit_signal_rx, &host_addr_clone, host_port, &username_clone, &auth_method_clone).await;
-                        remote_listener = ssh_session.retry_channel_forward_listen_channel(remote_port).await;
+                    r = remote_listener.accept() => match r {
+                        Ok(ssh_channel) => {
+                            let response_stream = match TokioTcpStream::connect(local_socket).await {
+                                Ok(s) => s,
+                                Err(e) => {
+                                    error!("try connect local:{:?} error:{:?}", local_socket, e);
+                                    tokio::time::sleep(core::time::Duration::from_secs(5)).await;
+                                    continue;
+                                }
+                            };
+
+                            handle_remote_channel_request(ssh_channel, response_stream);
+                        }
+                        Err(e) => {
+                            error!("remote ssh listener accept error:{:?}", e);
+                            thread::sleep(Duration::from_secs(20));
+                            ssh_session = match retry_get_ssh_session(&mut exit_signal_rx, &host_addr_clone, host_port, &username_clone, &auth_method_clone).await {
+                                Some(s) => s,
+                                None => {
+                                    error!("retry get ssh session error:{:?}", e);
+                                    break;
+                                }
+                            };
+                            remote_listener = ssh_session.retry_channel_forward_listen_channel(remote_port).await;
+                        }
                     }
                 }
             }
-        }
+        };
     });
 
     //let spawn_join_handle = open_remote_port_forward_channel(exit_signal_rx, ssh_session, local_socket, remote_port).await?;
